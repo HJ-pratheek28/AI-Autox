@@ -232,7 +232,7 @@ export async function executeAction(type: string, config: any, context: any): Pr
         // From header: show the logged-in user's email as sender name so recipients
         // see the correct identity. SMTP auth always uses SMTP_USER credentials.
         const displayName = userEmail ? userEmail.split('@')[0] : 'Zapier Central';
-        const dynamicFrom = `"${displayName}" <${smtpUser || userEmail}>`;
+        const dynamicFrom = `"${displayName}" <${userEmail || smtpUser}>`;
 
         if (smtpHost && smtpUser && smtpPass) {
           console.log(`[Execution Engine] Live SMTP connection active. Dispatching real email to ${recipient}...`);

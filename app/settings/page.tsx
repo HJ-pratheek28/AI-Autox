@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   User, 
   Bell, 
@@ -20,6 +20,8 @@ import {
   AlertTriangle,
   X
 } from 'lucide-react';
+import { useSession } from '@/components/session-provider';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-client';
 
 type TabType = 'profile' | 'notifications' | 'security' | 'billing' | 'members' | 'adv_security' | 'audit_log';
 
@@ -46,6 +48,8 @@ export default function SettingsPage() {
   const [showSavedToast, setShowSavedToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('Settings saved successfully!');
 
+  const { user: sessionUser } = useSession();
+
   // Profile Form States
   const [email, setEmail] = useState('28hjpratheek@gmail.com');
   const [firstName, setFirstName] = useState('H J');
@@ -53,6 +57,21 @@ export default function SettingsPage() {
   const [company, setCompany] = useState('Startup Co');
   const [role, setRole] = useState('Engineering');
   const [timezone, setTimezone] = useState('UTC+05:30 (India Standard Time)');
+
+  // Sync profile state when sessionUser changes
+  useEffect(() => {
+    if (sessionUser) {
+      setEmail(sessionUser.email || '');
+      if (sessionUser.full_name) {
+        const parts = sessionUser.full_name.split(' ');
+        setFirstName(parts[0] || '');
+        setLastName(parts.slice(1).join(' ') || '');
+      } else {
+        setFirstName(sessionUser.email ? sessionUser.email.split('@')[0] : '');
+        setLastName('');
+      }
+    }
+  }, [sessionUser]);
 
   // Notifications States
   const [isNotifyOpen, setIsNotifyOpen] = useState(false);
@@ -76,10 +95,33 @@ export default function SettingsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     setToastMessage('Settings saved successfully!');
+    
+    // Save to Supabase profiles table if real auth is active
+    if (isSupabaseConfigured && supabase && sessionUser && sessionUser.id !== 'mock') {
+      try {
+        const { error } = await supabase.from('profiles').update({
+          full_name: `${firstName} ${lastName}`.trim(),
+          email: email,
+          smtp_email: email, // Dynamic sender email maps to user's profiles smtp_email
+          updated_at: new Date().toISOString()
+        }).eq('id', sessionUser.id);
+        
+        if (error) {
+          console.error('[Settings] Supabase profile update failed:', error.message);
+          setToastMessage(`Profile save failed: ${error.message}`);
+        } else {
+          setToastMessage('Supabase profile updated successfully!');
+        }
+      } catch (err: any) {
+        console.error('[Settings] Unexpected profile update error:', err);
+        setToastMessage(`Error: ${err.message || 'unknown error'}`);
+      }
+    }
+
     setTimeout(() => {
       setIsSaving(false);
       setShowSavedToast(true);

@@ -180,6 +180,7 @@ export default function BuilderPage({ params }: { params: Promise<{ workflowId: 
   };
 
   const getUserEmail = () => {
+    if (sessionUser?.email) return sessionUser.email;
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('zc_user_email') || localStorage.getItem('google_auth_email');
       if (stored) return stored;

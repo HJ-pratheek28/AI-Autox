@@ -14,6 +14,7 @@ import {
   HelpCircle,
   Zap
 } from 'lucide-react';
+import { useSession } from '@/components/session-provider';
 
 interface NavItem {
   name: string;
@@ -34,6 +35,10 @@ const NAVIGATION: NavItem[] = [
 
 export function GlobalNavigation() {
   const pathname = usePathname();
+  const { user } = useSession();
+  const fullName = user?.full_name || 'Pratheek H.J.';
+  const avatarLetter = fullName.charAt(0).toUpperCase();
+  const email = user?.email || '28hjpratheek@gmail.com';
 
   return (
     <aside className="fixed inset-y-0 left-0 w-64 glass-panel border-r border-white/5 flex flex-col justify-between z-30">
@@ -95,17 +100,25 @@ export function GlobalNavigation() {
           <Settings className="w-4 h-4 text-white/40" />
           <span>System Settings</span>
         </Link>
-        <div className="flex items-center justify-between px-3.5 py-2.5 bg-white/5 rounded-xl border border-white/5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center font-bold text-xs text-white">
-              P
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-white leading-none">Pratheek H.J.</p>
-              <span className="text-[10px] text-white/40">Owner</span>
+        <div className="flex items-center justify-between px-3.5 py-2.5 bg-white/5 rounded-xl border border-white/5 overflow-hidden">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {user?.avatar_url ? (
+              <img 
+                src={user.avatar_url} 
+                alt={fullName} 
+                className="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0" 
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center font-bold text-xs text-white shrink-0">
+                {avatarLetter}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-white leading-none truncate">{fullName}</p>
+              <span className="text-[9px] text-white/40 truncate block mt-1 font-mono font-medium">{email}</span>
             </div>
           </div>
-          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider bg-white/10 text-white/60 border border-white/5 uppercase">
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider bg-white/10 text-white/60 border border-white/5 uppercase shrink-0">
             PRO
           </span>
         </div>

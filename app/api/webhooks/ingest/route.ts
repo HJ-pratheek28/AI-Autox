@@ -268,7 +268,8 @@ export async function POST(req: NextRequest) {
         execution_context: {
           trigger: {
             output: triggerPayload
-          }
+          },
+          userEmail: userEmail
         }
       })
       .select()

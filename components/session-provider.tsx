@@ -73,7 +73,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     init();
 
     // Listen for auth state changes (sign-in / sign-out)
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       if (session?.user) {
         setUser({
           id: session.user.id,
