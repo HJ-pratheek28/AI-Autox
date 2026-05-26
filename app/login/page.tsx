@@ -63,11 +63,34 @@ export default function LoginPage() {
   const [passwordError, setPasswordError] = useState('');
   const [mfaTimer, setMfaTimer] = useState(3);
 
-  const handleContinue = (e: React.FormEvent) => {
+  const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!acceptedTerms) return;
     
-    // Reset all modal values to initial clean slate
+    // Real Supabase OAuth flow: bypass mock chooser and go straight to Google
+    if (isSupabaseConfigured && supabase) {
+      setIsSubmitting(true);
+      setLoadingStep('Redirecting to Google Sign-In...');
+      setShowSelector(true);
+      setSelectorStep('LOADING');
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      
+      if (error) {
+        console.error('[Login] Supabase OAuth error:', error.message);
+        setIsSubmitting(false);
+        alert(`Sign-in failed: ${error.message}`);
+        setShowSelector(false);
+      }
+      return;
+    }
+    
+    // Reset all modal values to initial clean slate (mock mode fallback)
     setSelectorStep('SELECT');
     setSelectedAccount(null);
     setCustomEmail('');
