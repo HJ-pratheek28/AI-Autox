@@ -57,6 +57,35 @@ export default function AuthCallbackPage() {
 
     const checkSession = async () => {
       console.log('[Auth Callback] Fetching initial session...');
+      
+      // First, check for standard URL queries (PKCE flow)
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+
+      if (code) {
+        try {
+          console.log('[Auth Callback] Code found in URL, performing client-side manual exchange...');
+          setStatusText('Exchanging Google handshake token...');
+          const { data: exchangeData, error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (exchangeErr) {
+            throw exchangeErr;
+          }
+          
+          if (exchangeData.session) {
+            console.log('[Auth Callback] Client-side manual exchange successful.');
+            await handleSessionSync(exchangeData.session);
+            return;
+          }
+        } catch (err: any) {
+          console.error('[Auth Callback] Client-side manual exchange failed:', err.message);
+          setErrorMsg(`Handshake failed: ${err.message}`);
+          setTimeout(() => router.push('/login?error=handshake_failed'), 3000);
+          return;
+        }
+      }
+
+      // If no code, check if the session is already active (implicit flow fallback or post-handshake)
       const { data, error } = await supabase.auth.getSession();
       
       if (error) {
