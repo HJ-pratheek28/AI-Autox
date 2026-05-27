@@ -58,8 +58,49 @@ export default function AuthCallbackPage() {
     const checkSession = async () => {
       console.log('[Auth Callback] Fetching initial session...');
       
-      // First, check for standard URL queries (PKCE flow)
+      // 1. Check for errors returned in the URL search params or hash fragments
       const urlParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1)); // strip '#'
+      
+      const urlError = urlParams.get('error') || hashParams.get('error');
+      const urlErrorDesc = urlParams.get('error_description') || hashParams.get('error_description');
+
+      if (urlError) {
+        console.error('[Auth Callback] OAuth callback returned an error:', urlError, urlErrorDesc);
+        setErrorMsg(`OAuth Error: ${decodeURIComponent(urlErrorDesc || urlError)}`);
+        setTimeout(() => router.push('/login?error=oauth_error'), 5000);
+        return;
+      }
+
+      // 2. Check for explicit token parameters (Implicit Flow) in hash fragment
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        try {
+          console.log('[Auth Callback] Token found in hash fragment, activating session...');
+          setStatusText('Activating secure session...');
+          const { data: sessionData, error: sessionErr } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+
+          if (sessionErr) throw sessionErr;
+
+          if (sessionData.session) {
+            console.log('[Auth Callback] Hash session activation successful.');
+            await handleSessionSync(sessionData.session);
+            return;
+          }
+        } catch (err: any) {
+          console.error('[Auth Callback] Hash session activation failed:', err.message);
+          setErrorMsg(`Session activation failed: ${err.message}`);
+          setTimeout(() => router.push('/login?error=activation_failed'), 3000);
+          return;
+        }
+      }
+
+      // 3. Check for standard auth code (PKCE Flow) in search query parameters
       const code = urlParams.get('code');
 
       if (code) {
@@ -85,7 +126,7 @@ export default function AuthCallbackPage() {
         }
       }
 
-      // If no code, check if the session is already active (implicit flow fallback or post-handshake)
+      // 4. Default: Check if session is already parsed and active
       const { data, error } = await supabase.auth.getSession();
       
       if (error) {
